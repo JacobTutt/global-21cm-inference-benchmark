@@ -151,7 +151,7 @@ If you use this benchmark, please cite both the inference framework and the
 radio-galaxy signal model on which its astrophysical simulations are based:
 
 ```bibtex
-@inproceedings{tutt2026hybrid,
+@inproceedings{tutt2026neurips,
   title = {A Hybrid Surrogate Framework for End-to-End Uncertainty
            Quantification in Global 21-cm Cosmology},
   author = {Tutt, Jacob and Bevins, Harry T. J. and Alvey, James and
