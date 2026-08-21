@@ -1,48 +1,36 @@
 # Global 21-cm Inference Benchmark
 
-This repository contains the fixed end-to-end inference problem used for the
-radio-galaxy signal-recovery benchmark. It is intentionally not a configurable
-analysis pipeline: sky, beam and signal simulations have already been reduced
-to the tensors required by inference.
+`global21cm-benchmark` is a fixed, end-to-end Bayesian inference benchmark for
+global 21-cm cosmology. It packages 100 simulated observations, a neural signal
+emulator, a physics-informed foreground model, a linear beam surrogate, and
+both explicit and analytically marginalised likelihoods. Expensive sky and
+beam calculations are already reduced to immutable inference tensors, so the
+benchmark has no dependency on the simulation pipelines that generated them.
 
-## Data contract
+## Installation
 
-Each `src/global21cm_benchmark/simulated_data/dataset_XX` directory contains:
+Python 3.11--3.13 is supported.
 
-- `observation_XX.npy`: the `(86, 37)` frequency-time observation in K;
-- `signal_XX.npy`: the injected 21-cm profile in K;
-- `parameters_XX.npy`: its six continuous astrophysical parameters.
-
-`src/global21cm_benchmark/inference_tensors/response_operator.npy` has shape
-`(86, 37, 101, 30)`.
-Channel zero is the mean-beam response and the remaining 100 channels are
-beam-prior-whitened response modes. For spectral indices `beta`, inference
-constructs
-
-```text
-terms[f,t,k] = sum_r response[f,t,k,r] * (frequency[f] / 230 MHz) ** (-beta[r])
+```bash
+git clone https://github.com/JacobTutt/global-21cm-inference-benchmark.git
+cd global-21cm-inference-benchmark
+pip install .
 ```
 
-The explicit model samples the whitened beam scores from `Normal(0, 1)`. The
-marginalised likelihood integrates them out exactly. `beam_prior.npy` records
-the original PCA-score prior as `[mean, standard deviation]` for each mode.
+For NVIDIA GPUs, install the CUDA-enabled JAX extra:
 
-The implementation is an installable `src`-layout package. Its public modules
-are:
+```bash
+pip install ".[gpu]"
+```
 
-- `global21cm_benchmark.emulator`: fixed radio-galaxy signal emulator;
-- `global21cm_benchmark.forward_model`: dataset loading and forward models;
-- `global21cm_benchmark.likelihood`: collapsed and full likelihoods;
-- `global21cm_benchmark.inference`: fixed Nested Slice Sampling run.
+## Quickstart
 
-The only signal model is
-`global21cm_benchmark.emulator.evaluate_21cm(parameters)`. It accepts the six
-parameters listed in `global21cm_benchmark.emulator.PARAMETER_NAMES`; the
-discrete simulation coordinates are fixed internally to `alpha=1.3`,
-`nu_0=500 eV`, and `pop=232`.
+The likelihoods are ordinary JAX functions and can be passed directly to an
+inference method:
 
 ```python
-from global21cm_benchmark.emulator import evaluate_21cm
+import jax
+
 from global21cm_benchmark.forward_model import load_dataset
 from global21cm_benchmark.likelihood import (
     PRIOR_LOWER,
@@ -51,35 +39,73 @@ from global21cm_benchmark.likelihood import (
 )
 
 observation, injected_signal, injected_parameters = load_dataset(0)
-signal = evaluate_21cm(injected_parameters)
-parameters = (PRIOR_LOWER + PRIOR_UPPER) / 2
-log_likelihood = collapsed_log_likelihood(parameters, observation)
+log_likelihood = jax.jit(
+    lambda parameters: collapsed_log_likelihood(parameters, observation)
+)
+
+midpoint = (PRIOR_LOWER + PRIOR_UPPER) / 2
+print(log_likelihood(midpoint))
 ```
 
-## Run
+The injected signal and parameters are returned for evaluation only; they are
+not inputs to the likelihood.
+
+## Benchmark
+
+| Quantity | Value |
+| --- | ---: |
+| Observations | 100 |
+| Observation shape | `(86 frequencies, 37 times)` |
+| Foreground parameters | 30 |
+| Signal parameters | 6 |
+| Noise parameters | 1 |
+| Beam coefficients | 100 |
+| Marginalised dimension | 37 |
+| Explicit dimension | 137 |
+
+The marginalised likelihood integrates out all 100 linear beam coefficients
+analytically. The explicit likelihood includes their prior-whitened values in
+the sampled position. Both use the same emulator, foreground response, noise
+model, priors, and observations.
+
+See [Benchmark specification](docs/benchmark.md) for parameter orderings,
+array shapes, equations, and the packaged-data layout. Function-level details
+are available through the module docstrings:
+
+```python
+from global21cm_benchmark import forward_model, likelihood
+
+help(forward_model)
+help(likelihood)
+```
+
+## Reference inference
+
+Run the 37-dimensional analytically marginalised benchmark with:
 
 ```bash
-pip install -e .
 global21cm-inference 0
 ```
 
-The default run analytically marginalises the 100 beam coefficients. The
-137-dimensional explicit comparison is:
+Run the 137-dimensional explicit comparison with:
 
 ```bash
 global21cm-inference 0 --full
 ```
 
-Both use the paper configuration: 25 live points per dimension, eight inner
-slice steps per dimension, a 20% deletion fraction and `dlogZ < -3` stopping.
+Both use the paper configuration: 25 live points and eight inner slice steps
+per dimension, a 20% deletion fraction, and a `dlogZ < -3` stopping criterion.
+Results are written to `results/dataset_XX/{marginalised,full}`.
 
-Check the archived numerical contract with:
+## Validation
+
+Check the archived emulator, forward-model, and likelihood reference values:
 
 ```bash
 python -m tests.test_reference
 ```
 
-For a GPU container:
+For the GPU container:
 
 ```bash
 docker build -t global21cm-benchmark .
