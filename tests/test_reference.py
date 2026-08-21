@@ -2,18 +2,18 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from forward_model import ROOT, load_dataset
-from likelihood import (
+from global21cm_benchmark.emulator import evaluate_21cm
+from global21cm_benchmark.forward_model import TENSOR_DIR, load_dataset
+from global21cm_benchmark.likelihood import (
     collapsed_log_likelihood,
     full_log_likelihood,
 )
-from emulator import evaluate_21cm
 
 
 def test_fixed_benchmark_contract():
     observation, injected_signal, truth = load_dataset(0)
     signal = evaluate_21cm(truth)
-    with np.load(ROOT / "inference_tensors/reference_evaluation.npz") as reference:
+    with np.load(TENSOR_DIR / "reference_evaluation.npz") as reference:
         direct_parameters = jnp.asarray(reference["direct_parameters"])
         full_parameters = jnp.asarray(reference["full_parameters"])
         expected_marginalised = reference["marginalised_log_likelihood"]

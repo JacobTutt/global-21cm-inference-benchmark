@@ -35,14 +35,14 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from emulator import evaluate_21cm
+from .emulator import evaluate_21cm
 
 
 jax.config.update("jax_enable_x64", True)
 
-ROOT = Path(__file__).resolve().parent
-TENSOR_DIR = ROOT / "inference_tensors"
-DATA_DIR = ROOT / "simulated_data"
+PACKAGE_ROOT = Path(__file__).resolve().parent
+TENSOR_DIR = PACKAGE_ROOT / "inference_tensors"
+DATA_DIR = PACKAGE_ROOT / "simulated_data"
 
 # Fixed dimensions of the benchmark. They are deliberately not configurable:
 # changing any value would describe a different inference problem.
@@ -142,7 +142,7 @@ def explicit_forward_model(beta, beam_scores, signal_parameters):
         Prior-whitened PCA coordinates :math:`\mathbf{z}`. Each coordinate has
         an independent standard-normal prior.
     signal_parameters : array-like, shape (6,)
-        Continuous inputs to :func:`emulator.evaluate_21cm`.
+        Continuous inputs to :func:`global21cm_benchmark.emulator.evaluate_21cm`.
 
     Returns
     -------

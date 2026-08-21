@@ -33,9 +33,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from emulator import PARAMETER_NAMES as SIGNAL_PARAMETER_NAMES
-from emulator import evaluate_21cm
-from forward_model import (
+from .emulator import PARAMETER_NAMES as SIGNAL_PARAMETER_NAMES
+from .emulator import evaluate_21cm
+from .forward_model import (
     N_BEAM,
     N_BETA,
     N_SIGNAL,

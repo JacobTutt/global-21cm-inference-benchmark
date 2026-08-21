@@ -2,9 +2,9 @@ FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 WORKDIR /benchmark
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir "jax[cuda12]==0.6.2"
-COPY . .
+COPY pyproject.toml README.md ./
+COPY src ./src
+RUN pip install --no-cache-dir ".[gpu]"
 
-ENTRYPOINT ["python", "run_inference.py"]
+ENTRYPOINT ["global21cm-inference"]
 CMD ["0"]

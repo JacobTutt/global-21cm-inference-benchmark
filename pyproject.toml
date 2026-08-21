@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "global21cm-benchmark"
+version = "0.1.0"
+description = "Fixed end-to-end global 21-cm inference benchmark"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "jax==0.6.2",
+    "numpy==2.2.6",
+    "fastprogress==1.0.3",
+    "blackjax @ git+https://github.com/handley-lab/blackjax@95e93ed93e726b95143b2f4a9582888621625f52",
+]
+
+[project.optional-dependencies]
+gpu = ["jax[cuda12]==0.6.2"]
+
+[project.scripts]
+global21cm-inference = "global21cm_benchmark.inference:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+global21cm_benchmark = [
+    "emulator/*.npz",
+    "inference_tensors/*.npy",
+    "inference_tensors/*.npz",
+    "simulated_data/*/*.npy",
+]

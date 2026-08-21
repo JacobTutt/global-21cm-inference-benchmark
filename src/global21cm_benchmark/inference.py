@@ -26,8 +26,8 @@ import jax.numpy as jnp
 import numpy as np
 from blackjax.ns.utils import finalise, log_weights
 
-from forward_model import load_dataset
-from likelihood import (
+from .forward_model import load_dataset
+from .likelihood import (
     collapsed_log_likelihood,
     full_log_likelihood,
     log_prior,
@@ -139,9 +139,14 @@ def run(dataset_index, full=False):
     print(f"saved {output / 'nested_sampling_results.npz'}")
 
 
-if __name__ == "__main__":
+def main():
+    """Parse the two benchmark options and run Nested Slice Sampling."""
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset", type=int, help="Dataset index from 0 to 99.")
     parser.add_argument("--full", action="store_true", help="Sample the 100 beam scores explicitly.")
     arguments = parser.parse_args()
     run(arguments.dataset, arguments.full)
+
+
+if __name__ == "__main__":
+    main()
