@@ -26,6 +26,9 @@ The explicit model samples the whitened beam scores from `Normal(0, 1)`. The
 marginalised likelihood integrates them out exactly. `beam_prior.npy` records
 the original PCA-score prior as `[mean, standard deviation]` for each mode.
 
+`forward_model.py` exposes the mean and explicit forward models.
+`likelihood.py` exposes `collapsed_log_likelihood` and `full_log_likelihood`.
+
 The only signal model is `emulator.evaluate_21cm(parameters)`. It accepts the
 six parameters listed in `emulator.PARAMETER_NAMES`; the discrete simulation
 coordinates are fixed internally to `alpha=1.3`, `nu_0=500 eV`, and `pop=232`.

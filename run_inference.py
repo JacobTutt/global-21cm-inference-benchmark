@@ -9,11 +9,11 @@ import jax.numpy as jnp
 import numpy as np
 from blackjax.ns.utils import finalise, log_weights
 
-from benchmark import (
+from forward_model import load_dataset
+from likelihood import (
+    collapsed_log_likelihood,
     full_log_likelihood,
-    load_dataset,
     log_prior,
-    marginalised_log_likelihood,
     names,
     sample_prior,
 )
@@ -21,7 +21,7 @@ from benchmark import (
 
 def run(dataset_index, full=False):
     observation, _, _ = load_dataset(dataset_index)
-    likelihood = full_log_likelihood if full else marginalised_log_likelihood
+    likelihood = full_log_likelihood if full else collapsed_log_likelihood
     ndim = 137 if full else 37
     n_live = 25 * ndim
     n_inner = 8 * ndim

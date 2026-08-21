@@ -1,6 +1,4 @@
-"""Fixed forward model, priors and likelihoods for the benchmark."""
-
-from pathlib import Path
+"""Collapsed and full likelihoods for the fixed inference benchmark."""
 
 import jax
 import jax.numpy as jnp
@@ -8,61 +6,26 @@ import numpy as np
 
 from emulator import PARAMETER_NAMES as SIGNAL_PARAMETER_NAMES
 from emulator import evaluate_21cm
+from forward_model import (
+    N_BEAM,
+    N_BETA,
+    N_SIGNAL,
+    TENSOR_DIR,
+    explicit_forward_model,
+    foreground_terms,
+)
 
 
 jax.config.update("jax_enable_x64", True)
-
-ROOT = Path(__file__).resolve().parent
-TENSOR_DIR = ROOT / "inference_tensors"
-DATA_DIR = ROOT / "simulated_data"
-N_BETA = 30
-N_BEAM = 100
-N_SIGNAL = 6
 LOG_TWO_PI = jnp.log(2.0 * jnp.pi)
 
-FREQUENCIES_MHZ = jnp.asarray(np.load(TENSOR_DIR / "frequencies_mhz.npy"))
-RESPONSE_OPERATOR = jnp.asarray(np.load(TENSOR_DIR / "response_operator.npy"))
 with np.load(TENSOR_DIR / "parameter_priors.npz", allow_pickle=False) as _priors:
     PARAMETER_NAMES = tuple(str(name) for name in _priors["names"])
     PRIOR_LOWER = jnp.asarray(_priors["lower"])
     PRIOR_UPPER = jnp.asarray(_priors["upper"])
 
 
-def load_dataset(index):
-    """Load one observation, injected profile and six-dimensional truth."""
-    if not 0 <= index < 100:
-        raise ValueError("Dataset index must lie between 0 and 99.")
-    suffix = f"{index:02d}"
-    directory = DATA_DIR / f"dataset_{suffix}"
-    return (
-        jnp.asarray(np.load(directory / f"observation_{suffix}.npy")),
-        jnp.asarray(np.load(directory / f"signal_{suffix}.npy")),
-        jnp.asarray(np.load(directory / f"parameters_{suffix}.npy")),
-    )
-
-
-def foreground_terms(beta):
-    """Return the mean foreground and prior-whitened beam design matrix."""
-    beta = jnp.asarray(beta)
-    scaling = jnp.power(FREQUENCIES_MHZ[:, None] / 230.0, -beta[None, :])
-    terms = jnp.einsum("ftkr,fr->ftk", RESPONSE_OPERATOR, scaling)
-    return terms[:, :, 0], terms[:, :, 1:]
-
-
-def mean_forward_model(beta, signal_parameters):
-    """Return the mean-beam foreground plus global 21-cm signal."""
-    foreground, _ = foreground_terms(beta)
-    return foreground + evaluate_21cm(signal_parameters)[:, None]
-
-
-def explicit_forward_model(beta, beam_scores, signal_parameters):
-    """Return one explicit beam realisation; beam scores have a unit-normal prior."""
-    foreground, design = foreground_terms(beta)
-    beam_correction = jnp.einsum("ftm,m->ft", design, beam_scores)
-    return foreground + beam_correction + evaluate_21cm(signal_parameters)[:, None]
-
-
-def marginalised_log_likelihood(parameters, observation):
+def collapsed_log_likelihood(parameters, observation):
     """Integrate the 100 whitened beam coefficients out analytically."""
     beta = parameters[:N_BETA]
     signal_parameters = parameters[N_BETA : N_BETA + N_SIGNAL]
@@ -81,9 +44,6 @@ def marginalised_log_likelihood(parameters, observation):
         jnp.diag(cholesky)
     ).sum()
     return -0.5 * (quadratic + logdet + residual.size * LOG_TWO_PI)
-
-
-collapsed_log_likelihood = marginalised_log_likelihood
 
 
 def full_log_likelihood(parameters, observation):

@@ -2,11 +2,10 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from benchmark import (
-    ROOT,
+from forward_model import ROOT, load_dataset
+from likelihood import (
+    collapsed_log_likelihood,
     full_log_likelihood,
-    load_dataset,
-    marginalised_log_likelihood,
 )
 from emulator import evaluate_21cm
 
@@ -20,7 +19,7 @@ def test_fixed_benchmark_contract():
         expected_marginalised = reference["marginalised_log_likelihood"]
         expected_full = reference["full_log_likelihood"]
 
-    marginalised = jax.jit(marginalised_log_likelihood)(direct_parameters, observation)
+    marginalised = jax.jit(collapsed_log_likelihood)(direct_parameters, observation)
     full = jax.jit(full_log_likelihood)(full_parameters, observation)
 
     assert observation.shape == (86, 37)
