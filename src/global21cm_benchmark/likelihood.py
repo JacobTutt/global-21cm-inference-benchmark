@@ -11,8 +11,8 @@ The explicit model is linear in the 100 prior-whitened beam scores,
    \quad
    \mathbf{n}\sim\mathcal{N}(\mathbf{0},\sigma_n^2\mathbf{I}).
 
-``full_log_likelihood`` evaluates this model with :math:`\mathbf{z}` included
-in the sampled position. ``collapsed_log_likelihood`` integrates
+``Likelihood.evaluate_full`` evaluates this model with :math:`\mathbf{z}`
+included in the sampled position. ``Likelihood.evaluate_collapsed`` integrates
 :math:`\mathbf{z}` out exactly. Rather than forming the dense 3182-by-3182
 effective covariance, the collapsed calculation works in the 100-dimensional
 beam space using
@@ -29,6 +29,8 @@ is mathematically equivalent to using covariance
 only one 100-by-100 Cholesky factorisation.
 """
 
+import math
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -40,24 +42,24 @@ from .forward_model import (
     N_BETA,
     N_SIGNAL,
     TENSOR_DIR,
-    explicit_forward_model,
+    forward_model,
     foreground_terms,
 )
 
 
 jax.config.update("jax_enable_x64", True)
-LOG_TWO_PI = jnp.log(2.0 * jnp.pi)
+LOG_TWO_PI = math.log(2.0 * math.pi)
 
 # The directly sampled coordinates are always ordered as 30 foreground
 # indices, six signal parameters and one log10 noise amplitude. Their bounds
 # are immutable benchmark data rather than runtime configuration.
 with np.load(TENSOR_DIR / "parameter_priors.npz", allow_pickle=False) as _priors:
-    PARAMETER_NAMES = tuple(str(name) for name in _priors["names"])
-    PRIOR_LOWER = jnp.asarray(_priors["lower"])
-    PRIOR_UPPER = jnp.asarray(_priors["upper"])
+    _PARAMETER_NAMES = tuple(str(name) for name in _priors["names"])
+    _PRIOR_LOWER = jnp.asarray(_priors["lower"])
+    _PRIOR_UPPER = jnp.asarray(_priors["upper"])
 
 
-def collapsed_log_likelihood(parameters, observation):
+def _collapsed_log_likelihood(parameters, observation):
     r"""Evaluate the 37-dimensional beam-collapsed log likelihood.
 
     Parameters
@@ -121,7 +123,7 @@ def collapsed_log_likelihood(parameters, observation):
     return -0.5 * (quadratic + logdet + residual.size * LOG_TWO_PI)
 
 
-def full_log_likelihood(parameters, observation):
+def _full_log_likelihood(parameters, observation):
     r"""Evaluate the 137-dimensional explicit Gaussian log likelihood.
 
     ``parameters`` is ordered as 30 spectral indices, 100 whitened beam scores,
@@ -139,14 +141,14 @@ def full_log_likelihood(parameters, observation):
 
     # Unlike the collapsed path, the sampled beam realisation is applied
     # directly before evaluating the standard white-noise Gaussian density.
-    residual = observation - explicit_forward_model(beta, beam_scores, signal_parameters)
+    residual = observation - forward_model(beta, beam_scores, signal_parameters)
     return -0.5 * (
         jnp.sum(residual**2) / noise_variance
         + residual.size * (jnp.log(noise_variance) + LOG_TWO_PI)
     )
 
 
-def log_prior(parameters, full=False):
+def _log_prior(parameters, full=False):
     r"""Evaluate the normalized prior density for either parameterisation.
 
     The 37 direct parameters have independent uniform priors stored in
@@ -168,12 +170,12 @@ def log_prior(parameters, full=False):
 
     # Return negative infinity outside the prior support. Inside it, include
     # the uniform normalization so Bayesian evidence retains its proper scale.
-    inside = jnp.all((direct >= PRIOR_LOWER) & (direct <= PRIOR_UPPER))
-    uniform_log_probability = -jnp.log(PRIOR_UPPER - PRIOR_LOWER).sum()
+    inside = jnp.all((direct >= _PRIOR_LOWER) & (direct <= _PRIOR_UPPER))
+    uniform_log_probability = -jnp.log(_PRIOR_UPPER - _PRIOR_LOWER).sum()
     return jnp.where(inside, uniform_log_probability + beam_log_probability, -jnp.inf)
 
 
-def sample_prior(key, count, full=False):
+def _sample_prior(key, count, full=False):
     """Draw ``count`` independent live points from the normalized prior.
 
     Returns shape ``(count, 37)`` for the collapsed problem and
@@ -183,7 +185,10 @@ def sample_prior(key, count, full=False):
 
     # Draw every directly sampled parameter in one broadcast operation.
     direct = jax.random.uniform(
-        uniform_key, (count, PRIOR_LOWER.size), minval=PRIOR_LOWER, maxval=PRIOR_UPPER
+        uniform_key,
+        (count, _PRIOR_LOWER.size),
+        minval=_PRIOR_LOWER,
+        maxval=_PRIOR_UPPER,
     )
     if not full:
         return direct
@@ -194,9 +199,9 @@ def sample_prior(key, count, full=False):
     return jnp.concatenate((direct[:, :N_BETA], beam_scores, direct[:, N_BETA:]), axis=1)
 
 
-def names(full=False):
+def _names(full=False):
     """Return parameter names in exactly the order consumed by a likelihood."""
     if not full:
-        return PARAMETER_NAMES
+        return _PARAMETER_NAMES
     beam_names = tuple(f"beam_{index:03d}" for index in range(N_BEAM))
-    return (*PARAMETER_NAMES[:N_BETA], *beam_names, *SIGNAL_PARAMETER_NAMES, "log_noise")
+    return (*_PARAMETER_NAMES[:N_BETA], *beam_names, *SIGNAL_PARAMETER_NAMES, "log_noise")

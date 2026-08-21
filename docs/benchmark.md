@@ -23,13 +23,17 @@ The package contains 100 directories under
 | `signal_XX.npy` | `(86,)` | Injected global 21-cm profile in K |
 | `parameters_XX.npy` | `(6,)` | Injected continuous signal parameters |
 
-Use `load_dataset(index)` rather than constructing package-data paths:
+Use `Dataset(index)` rather than constructing package-data paths:
 
 ```python
-from global21cm_benchmark.forward_model import load_dataset
+from global21cm_benchmark import Dataset
 
-observation, injected_signal, injected_parameters = load_dataset(0)
+dataset = Dataset(0)
+observation = dataset.observation
 ```
+
+`dataset.injected_signal` and `dataset.injected_parameters` are retained for
+benchmark evaluation but are never supplied to the likelihood.
 
 ## Signal emulator
 
@@ -83,16 +87,17 @@ where `log_noise` is the base-10 logarithm of the Gaussian-noise standard
 deviation in K. The 137-dimensional explicit position inserts
 `beam_000, ..., beam_099` between the foreground and signal blocks.
 
-The bounds and exact names are stored in `parameter_priors.npz` and exposed as
-`PRIOR_LOWER`, `PRIOR_UPPER`, and `PARAMETER_NAMES` from
-`global21cm_benchmark.likelihood`.
+The exact names and bounds are immutable benchmark data. `Prior()` loads them
+internally: `sample_collapsed` and `sample_full` draw the corresponding
+parameterisation, while `evaluate_collapsed` and `evaluate_full` return its
+normalized log density. Users do not need to manipulate prior-bound arrays.
 
 ## Likelihoods
 
-`full_log_likelihood(parameters, observation)` evaluates independent Gaussian
+`Likelihood(dataset).evaluate_full(parameters)` evaluates independent Gaussian
 noise around the explicit 137-dimensional forward model.
 
-`collapsed_log_likelihood(parameters, observation)` integrates the 100 beam
+`Likelihood(dataset).evaluate_collapsed(parameters)` integrates the 100 beam
 coefficients out exactly. For residual $\mathbf{r}$, noise variance
 $\sigma_n^2$, and flattened design matrix $\mathbf{H}$, it operates in beam
 space through
@@ -115,11 +120,74 @@ $$
 This avoids constructing or factorising the dense effective data covariance;
 only the 100-by-100 matrix $\mathbf{Q}$ is factorised.
 
-## Public modules
+## Public interface
+
+```python
+import jax
+
+from global21cm_benchmark import Dataset, Likelihood, Posterior, Prior
+
+dataset = Dataset(0)
+likelihood = Likelihood(dataset)
+prior = Prior()
+posterior = Posterior(dataset)
+
+collapsed_parameters = prior.sample_collapsed(jax.random.key(0))[0]
+full_parameters = prior.sample_full(jax.random.key(1))[0]
+
+likelihood.evaluate_collapsed(collapsed_parameters)
+likelihood.evaluate_full(full_parameters)
+prior.evaluate_collapsed(collapsed_parameters)
+prior.evaluate_full(full_parameters)
+posterior.evaluate_collapsed(collapsed_parameters)
+posterior.evaluate_full(full_parameters)
+```
+
+The posterior methods return the corresponding normalized log prior plus log
+likelihood. The standalone `forward_model(beta, beam_scores,
+signal_parameters)` evaluates the single explicit physical model; analytical
+beam marginalisation is a likelihood operation, not a second forward model.
+
+## Nested Slice Sampling
+
+BlackJAX NSS requires the prior and likelihood separately because it samples
+from the prior subject to a likelihood constraint. For the collapsed problem:
+
+```python
+import blackjax
+import jax
+
+from global21cm_benchmark import Dataset, Likelihood, Prior
+
+dataset = Dataset(0)
+likelihood = Likelihood(dataset)
+prior = Prior()
+
+algorithm = blackjax.nss(
+    logprior_fn=prior.evaluate_collapsed,
+    loglikelihood_fn=likelihood.evaluate_collapsed,
+    num_delete=185,
+    num_inner_steps=296,
+)
+
+key, initial_key, step_key = jax.random.split(jax.random.key(430000), 3)
+live_points = prior.sample_collapsed(initial_key, count=925)
+state = algorithm.init(live_points)
+state, info = jax.jit(algorithm.step)(step_key, state)
+```
+
+Each call to `algorithm.step` performs one complete delete-and-replace
+transition, including all configured stepping-out and shrinkage evaluations.
+The reference CLI repeats this transition to the evidence stopping criterion,
+then performs finalisation, evidence calculation, and likelihood-call
+accounting.
+
+## Implementation modules
 
 | Module | Purpose |
 | --- | --- |
-| `global21cm_benchmark.emulator` | Evaluate the fixed signal emulator |
-| `global21cm_benchmark.forward_model` | Load datasets and evaluate mean or explicit models |
-| `global21cm_benchmark.likelihood` | Priors and collapsed or explicit likelihoods |
+| `global21cm_benchmark.api` | Public dataset and density objects |
+| `global21cm_benchmark.emulator` | Fixed signal emulator |
+| `global21cm_benchmark.forward_model` | Packaged data and response contractions |
+| `global21cm_benchmark.likelihood` | Collapsed and explicit density calculations |
 | `global21cm_benchmark.inference` | Reproduce the reference Nested Slice Sampling run |

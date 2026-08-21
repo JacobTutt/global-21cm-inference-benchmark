@@ -25,30 +25,26 @@ pip install ".[gpu]"
 
 ## Quickstart
 
-The likelihoods are ordinary JAX functions and can be passed directly to an
-inference method:
+The benchmark objects expose ordinary JAX-compatible methods:
 
 ```python
 import jax
 
-from global21cm_benchmark.forward_model import load_dataset
-from global21cm_benchmark.likelihood import (
-    PRIOR_LOWER,
-    PRIOR_UPPER,
-    collapsed_log_likelihood,
-)
+from global21cm_benchmark import Dataset, Likelihood, Posterior, Prior
 
-observation, injected_signal, injected_parameters = load_dataset(0)
-log_likelihood = jax.jit(
-    lambda parameters: collapsed_log_likelihood(parameters, observation)
-)
+dataset = Dataset(0)
+likelihood = Likelihood(dataset)
+prior = Prior()
+posterior = Posterior(dataset)
 
-midpoint = (PRIOR_LOWER + PRIOR_UPPER) / 2
-print(log_likelihood(midpoint))
+parameters = prior.sample_collapsed(jax.random.key(0))[0]
+print(jax.jit(likelihood.evaluate_collapsed)(parameters))
+print(jax.jit(posterior.evaluate_collapsed)(parameters))
 ```
 
-The injected signal and parameters are returned for evaluation only; they are
-not inputs to the likelihood.
+Use `evaluate_full` and `sample_full` for the 137-dimensional explicit model.
+The injected values are available as `dataset.injected_signal` and
+`dataset.injected_parameters` for evaluation only.
 
 ## Benchmark
 
@@ -68,15 +64,17 @@ analytically. The explicit likelihood includes their prior-whitened values in
 the sampled position. Both use the same emulator, foreground response, noise
 model, priors, and observations.
 
-See [Benchmark specification](docs/benchmark.md) for parameter orderings,
-array shapes, equations, and the packaged-data layout. Function-level details
-are available through the module docstrings:
+See [Benchmark specification](docs/benchmark.md) for the object interface,
+parameter orderings, array shapes, equations, and packaged-data layout.
+Function-level details are available through the public classes:
 
 ```python
-from global21cm_benchmark import forward_model, likelihood
+from global21cm_benchmark import Dataset, Likelihood, Posterior, Prior
 
-help(forward_model)
-help(likelihood)
+help(Dataset)
+help(Likelihood)
+help(Prior)
+help(Posterior)
 ```
 
 ## Reference inference

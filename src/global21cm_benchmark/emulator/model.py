@@ -33,7 +33,7 @@ PARAMETER_NAMES = (
     "tau",
     "log10fradio",
 )
-FREQUENCIES_MHZ = jnp.arange(50.0, 136.0, dtype=jnp.float32)
+FREQUENCIES_MHZ = np.arange(50.0, 136.0, dtype=np.float32)
 _FIXED_ALPHA = 1.3
 _FIXED_NU_0 = 500.0
 _FIXED_POP = 232.0
@@ -46,20 +46,20 @@ def _weights():
     with np.load(Path(__file__).with_name("weights.npz"), allow_pickle=False) as data:
         # Saved affine transformations reproduce the coordinates used during
         # training. Network weights remain float32 by construction.
-        offsets = jnp.asarray(data["feature_offset"], dtype=jnp.float32)
-        scales = jnp.asarray(data["feature_scale"], dtype=jnp.float32)
-        target_scale = jnp.asarray(data["target_scale"], dtype=jnp.float32)
+        offsets = np.asarray(data["feature_offset"], dtype=np.float32)
+        scales = np.asarray(data["feature_scale"], dtype=np.float32)
+        target_scale = np.asarray(data["target_scale"], dtype=np.float32)
         layer_count = int(data["hidden_layer_count"])
         kernels = tuple(
-            jnp.asarray(data[f"hidden_{index}_kernel"], dtype=jnp.float32)
+            np.asarray(data[f"hidden_{index}_kernel"], dtype=np.float32)
             for index in range(layer_count)
         )
         biases = tuple(
-            jnp.asarray(data[f"hidden_{index}_bias"], dtype=jnp.float32)
+            np.asarray(data[f"hidden_{index}_bias"], dtype=np.float32)
             for index in range(layer_count)
         )
-        readout_kernel = jnp.asarray(data["readout_kernel"], dtype=jnp.float32)
-        readout_bias = jnp.asarray(data["readout_bias"], dtype=jnp.float32)
+        readout_kernel = np.asarray(data["readout_kernel"], dtype=np.float32)
+        readout_bias = np.asarray(data["readout_bias"], dtype=np.float32)
     return offsets, scales, target_scale, kernels, biases, readout_kernel, readout_bias
 
 
@@ -79,9 +79,13 @@ def evaluate_21cm(parameters):
     """
     theta = jnp.asarray(parameters, dtype=jnp.float32)
     if theta.shape != (6,):
-        raise ValueError(f"Expected six parameters in the order {PARAMETER_NAMES}; got {theta.shape}.")
+        raise ValueError(
+            f"Expected six parameters in the order {PARAMETER_NAMES}; got {theta.shape}."
+        )
 
-    offsets, scales, target_scale, kernels, biases, readout_kernel, readout_bias = _weights()
+    offsets, scales, target_scale, kernels, biases, readout_kernel, readout_bias = (
+        jax.tree.map(jnp.asarray, _weights())
+    )
 
     # Restore the complete nine-parameter simulator ordering by inserting the
     # three fixed discrete coordinates around the sampled continuous values.
@@ -100,7 +104,8 @@ def evaluate_21cm(parameters):
     )
     # Convert observing frequency to redshift, then apply the saved affine
     # transformations to every network feature.
-    redshift = _REST_FREQUENCY_MHZ / FREQUENCIES_MHZ - 1.0
+    frequencies_mhz = jnp.asarray(FREQUENCIES_MHZ)
+    redshift = _REST_FREQUENCY_MHZ / frequencies_mhz - 1.0
     scaled_redshift = (redshift - offsets[0]) / scales[0]
     scaled_theta = (full_theta - offsets[1:]) / scales[1:]
 
@@ -109,7 +114,7 @@ def evaluate_21cm(parameters):
     features = jnp.concatenate(
         (
             scaled_redshift[:, None],
-            jnp.broadcast_to(scaled_theta, (FREQUENCIES_MHZ.size, scaled_theta.size)),
+            jnp.broadcast_to(scaled_theta, (frequencies_mhz.size, scaled_theta.size)),
         ),
         axis=1,
     )

@@ -26,14 +26,8 @@ import jax.numpy as jnp
 import numpy as np
 from blackjax.ns.utils import finalise, log_weights
 
-from .forward_model import load_dataset
-from .likelihood import (
-    collapsed_log_likelihood,
-    full_log_likelihood,
-    log_prior,
-    names,
-    sample_prior,
-)
+from .api import Dataset, Likelihood, Prior
+from .likelihood import _names
 
 
 def run(dataset_index, full=False):
@@ -49,8 +43,14 @@ def run(dataset_index, full=False):
     """
     # The injected signal and generating parameters are intentionally ignored:
     # inference receives only the simulated observation.
-    observation, _, _ = load_dataset(dataset_index)
-    likelihood = full_log_likelihood if full else collapsed_log_likelihood
+    dataset = Dataset(dataset_index)
+    likelihood = Likelihood(dataset)
+    prior = Prior()
+    evaluate_likelihood = (
+        likelihood.evaluate_full if full else likelihood.evaluate_collapsed
+    )
+    evaluate_prior = prior.evaluate_full if full else prior.evaluate_collapsed
+    sample_prior = prior.sample_full if full else prior.sample_collapsed
 
     # Paper configuration: 25 live points and eight constrained slice steps per
     # dimension, replacing 20% of the live set in each outer NS iteration.
@@ -62,8 +62,8 @@ def run(dataset_index, full=False):
     # Both likelihoods share the same NSS implementation and differ only in
     # their parameter dimension, prior and treatment of beam uncertainty.
     algorithm = blackjax.nss(
-        logprior_fn=lambda parameters: log_prior(parameters, full),
-        loglikelihood_fn=lambda parameters: likelihood(parameters, observation),
+        logprior_fn=evaluate_prior,
+        loglikelihood_fn=evaluate_likelihood,
         num_delete=n_delete,
         num_inner_steps=n_inner,
     )
@@ -71,7 +71,7 @@ def run(dataset_index, full=False):
     # Draw and evaluate the complete initial live set in parallel.
     key = jax.random.PRNGKey(430000)
     key, initial_key = jax.random.split(key)
-    state = algorithm.init(sample_prior(initial_key, n_live, full))
+    state = algorithm.init(sample_prior(initial_key, n_live))
 
     @jax.jit
     def step(state, key):
@@ -129,7 +129,7 @@ def run(dataset_index, full=False):
     output.mkdir(parents=True, exist_ok=True)
     np.savez(
         output / "nested_sampling_results.npz",
-        parameter_names=np.asarray(names(full)),
+        parameter_names=np.asarray(_names(full)),
         particles=np.asarray(final_state.particles),
         log_likelihood=np.asarray(final_state.loglikelihood),
         log_likelihood_birth=np.asarray(final_state.loglikelihood_birth),

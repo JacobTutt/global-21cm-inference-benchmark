@@ -50,10 +50,10 @@ N_BETA = 30
 N_BEAM = 100
 N_SIGNAL = 6
 
-# Load the two immutable arrays once. Keeping them as JAX arrays allows every
-# contraction below to remain on-device when enclosed by a compiled likelihood.
-FREQUENCIES_MHZ = jnp.asarray(np.load(TENSOR_DIR / "frequencies_mhz.npy"))
-RESPONSE_OPERATOR = jnp.asarray(np.load(TENSOR_DIR / "response_operator.npy"))
+# Retain immutable package data as NumPy arrays. Each JIT trace promotes them
+# to device constants without sharing tracer state between compiled densities.
+FREQUENCIES_MHZ = np.load(TENSOR_DIR / "frequencies_mhz.npy")
+RESPONSE_OPERATOR = np.load(TENSOR_DIR / "response_operator.npy")
 
 
 def load_dataset(index):
@@ -113,25 +113,15 @@ def foreground_terms(beta):
 
     # Evaluate one power law per frequency and foreground region. This is the
     # sole parameter-dependent operation not already folded into the operator.
-    scaling = jnp.power(FREQUENCIES_MHZ[:, None] / 230.0, -beta[None, :])
+    scaling = jnp.power(jnp.asarray(FREQUENCIES_MHZ)[:, None] / 230.0, -beta[None, :])
 
     # Contract the 30 regional responses. Channel zero is the mean response;
     # the remaining channels are columns of the linear beam design matrix.
-    terms = jnp.einsum("ftkr,fr->ftk", RESPONSE_OPERATOR, scaling)
+    terms = jnp.einsum("ftkr,fr->ftk", jnp.asarray(RESPONSE_OPERATOR), scaling)
     return terms[:, :, 0], terms[:, :, 1:]
 
 
-def mean_forward_model(beta, signal_parameters):
-    r"""Return :math:`\boldsymbol{\mu}=\mathbf{T}_{\rm FG}+\mathbf{T}_{21}`.
-
-    The global signal is independent of observing time, so its 86-frequency
-    profile is broadcast across the 37 five-minute spectra.
-    """
-    foreground, _ = foreground_terms(beta)
-    return foreground + evaluate_21cm(signal_parameters)[:, None]
-
-
-def explicit_forward_model(beta, beam_scores, signal_parameters):
+def forward_model(beta, beam_scores, signal_parameters):
     r"""Evaluate the full model :math:`\boldsymbol{\mu}+\mathbf{H}\mathbf{z}`.
 
     Parameters
