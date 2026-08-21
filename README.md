@@ -1,11 +1,11 @@
 # Global 21-cm Inference Benchmark
 
 `global21cm-benchmark` is a fixed, end-to-end Bayesian inference benchmark for
-global 21-cm cosmology. It packages 100 simulated observations, a neural signal
-emulator, a physics-informed foreground model, a linear beam surrogate, and
-both explicit and analytically marginalised likelihoods. Expensive sky and
-beam calculations are already reduced to immutable inference tensors, so the
-benchmark has no dependency on the simulation pipelines that generated them.
+global 21-cm cosmology. It packages 100 simulated observations, an accelerated
+hybrid forward model, explicit and analytically collapsed likelihoods, and a
+reference Nested Slice Sampling (NSS) configuration. The expensive simulation
+products are supplied as immutable tensors, so reproducing the benchmark does
+not require the pipelines that generated them.
 
 ## Installation
 
@@ -23,9 +23,65 @@ For NVIDIA GPUs, install the CUDA-enabled JAX extra:
 pip install ".[gpu]"
 ```
 
-## Quickstart
+## 1. Forward model
 
-The benchmark objects expose ordinary JAX-compatible methods:
+The forward model combines three representations selected for the physical
+and computational structure of each uncertainty source:
+
+- **Cosmological signal:** a JAX neural emulator maps six continuous
+  astrophysical parameters to an 86-channel global 21-cm spectrum.
+- **Astrophysical foregrounds:** 30 regional spectral indices preserve the
+  measured spatial structure of the low-frequency radio sky without sampling
+  an independent spectrum in every pixel.
+- **Instrumental beam:** a 100-mode linear surrogate captures chromatic beam
+  uncertainty through a precomputed frequency-time response operator.
+
+The likelihood adds one parameter for the amplitude of independent Gaussian
+noise. Each packaged observation contains 86 frequencies and 37 observing
+times.
+
+![Hybrid forward-model components](docs/figures/forward_model.png)
+
+*Figure 1. Hybrid forward model combining neural emulation, a physics-informed
+foreground representation, and a linear surrogate of beam uncertainty.*
+
+The package exposes one explicit forward model:
+
+```python
+import jax
+
+from global21cm_benchmark import Dataset, Prior, forward_model
+
+dataset = Dataset(0)
+parameters = Prior().sample_full(jax.random.key(0))[0]
+prediction = forward_model(
+    parameters[:30],       # foreground spectral indices
+    parameters[30:130],    # beam coefficients
+    parameters[130:136],   # signal parameters
+)
+```
+
+The injected profile and parameters are available as
+`dataset.injected_signal` and `dataset.injected_parameters` for evaluation;
+they are never supplied to the likelihood.
+
+## 2. Full and collapsed likelihoods
+
+Both likelihoods use the same observation, priors, forward model, and
+Gaussian-noise model:
+
+- **Full:** directly samples all 100 beam coefficients, giving a
+  137-dimensional parameter space.
+- **Collapsed:** analytically integrates the linear beam coefficients under
+  their Gaussian prior, reducing the sampled space to 37 dimensions while
+  retaining their induced covariance.
+
+![End-to-end inference pipeline](docs/figures/inference_pipeline.png)
+
+*Figure 2. End-to-end inference path from the accelerated forward model to
+likelihood-based Bayesian sampling.*
+
+The two parameterisations share a single object interface:
 
 ```python
 import jax
@@ -34,19 +90,49 @@ from global21cm_benchmark import Dataset, Likelihood, Posterior, Prior
 
 dataset = Dataset(0)
 likelihood = Likelihood(dataset)
-prior = Prior()
 posterior = Posterior(dataset)
+prior = Prior()
 
-parameters = prior.sample_collapsed(jax.random.key(0))[0]
-print(jax.jit(likelihood.evaluate_collapsed)(parameters))
-print(jax.jit(posterior.evaluate_collapsed)(parameters))
+collapsed = prior.sample_collapsed(jax.random.key(0))[0]
+full = prior.sample_full(jax.random.key(1))[0]
+
+collapsed_log_likelihood = likelihood.evaluate_collapsed(collapsed)
+full_log_likelihood = likelihood.evaluate_full(full)
+collapsed_log_posterior = posterior.evaluate_collapsed(collapsed)
+full_log_posterior = posterior.evaluate_full(full)
 ```
 
-Use `evaluate_full` and `sample_full` for the 137-dimensional explicit model.
-The injected values are available as `dataset.injected_signal` and
-`dataset.injected_parameters` for evaluation only.
+All evaluation methods are compatible with `jax.jit` and `jax.vmap`.
 
-## Benchmark
+## 3. Nested Slice Sampling
+
+The reference inference uses the vectorised NSS implementation in BlackJAX.
+BlackJAX receives the selected prior and likelihood separately, initializes
+the live set from the prior, and performs each complete delete-and-replace
+transition through `algorithm.step`.
+
+![Nested Slice Sampling recovery benchmark](docs/figures/nss_signal_recovery.png)
+
+*Figure 3. End-to-end signal recovery from the collapsed NSS benchmark across
+100 unseen signal realisations.*
+
+Run the 37-dimensional collapsed benchmark for dataset 0 with:
+
+```bash
+global21cm-inference 0
+```
+
+Run the 137-dimensional full comparison with:
+
+```bash
+global21cm-inference 0 --full
+```
+
+Both use 25 live points and eight inner slice steps per dimension, replace 20%
+of the live set per iteration, and stop at `dlogZ < -3`. Results are written to
+`results/dataset_XX/{marginalised,full}`.
+
+## Benchmark dimensions
 
 | Quantity | Value |
 | --- | ---: |
@@ -56,46 +142,13 @@ The injected values are available as `dataset.injected_signal` and
 | Signal parameters | 6 |
 | Noise parameters | 1 |
 | Beam coefficients | 100 |
-| Marginalised dimension | 37 |
-| Explicit dimension | 137 |
+| Collapsed dimension | 37 |
+| Full dimension | 137 |
 
-The marginalised likelihood integrates out all 100 linear beam coefficients
-analytically. The explicit likelihood includes their prior-whitened values in
-the sampled position. Both use the same emulator, foreground response, noise
-model, priors, and observations.
+## Documentation and validation
 
-See [Benchmark specification](docs/benchmark.md) for the object interface,
-parameter orderings, array shapes, equations, and packaged-data layout.
-Function-level details are available through the public classes:
-
-```python
-from global21cm_benchmark import Dataset, Likelihood, Posterior, Prior
-
-help(Dataset)
-help(Likelihood)
-help(Prior)
-help(Posterior)
-```
-
-## Reference inference
-
-Run the 37-dimensional analytically marginalised benchmark with:
-
-```bash
-global21cm-inference 0
-```
-
-Run the 137-dimensional explicit comparison with:
-
-```bash
-global21cm-inference 0 --full
-```
-
-Both use the paper configuration: 25 live points and eight inner slice steps
-per dimension, a 20% deletion fraction, and a `dlogZ < -3` stopping criterion.
-Results are written to `results/dataset_XX/{marginalised,full}`.
-
-## Validation
+See the [benchmark specification](docs/benchmark.md) for the parameter
+ordering, likelihood equations, array shapes, and packaged-data layout.
 
 Check the archived emulator, forward-model, and likelihood reference values:
 
