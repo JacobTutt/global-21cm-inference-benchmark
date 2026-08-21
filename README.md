@@ -147,21 +147,10 @@ of the live set per iteration, and stop at `dlogZ < -3`. Results are written to
 
 ## Citation
 
-If you use this benchmark, please cite both the inference framework and the
-radio-galaxy signal model on which its astrophysical simulations are based:
+If you use this benchmark, please cite the radio-galaxy signal model on which
+its astrophysical simulations are based:
 
 ```bibtex
-@inproceedings{tutt2026neurips,
-  title = {A Hybrid Surrogate Framework for End-to-End Uncertainty
-           Quantification in Global 21-cm Cosmology},
-  author = {Tutt, Jacob and Bevins, Harry T. J. and Alvey, James and
-            Cumner, John and Anstey, Dominic and Fialkov, Anastasia and
-            de Lera Acedo, Eloy},
-  booktitle = {NeurIPS 2026 Workshop on Sim2Science: ML with Imperfect
-               Scientific Models},
-  year = {2026}
-}
-
 @article{reis2020radio,
   title = {High-redshift radio galaxies: a potential new source of 21-cm
            fluctuations},
