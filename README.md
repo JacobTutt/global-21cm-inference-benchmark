@@ -1,11 +1,27 @@
 # Global 21-cm Inference Benchmark
 
-`global21cm-benchmark` is a fixed, end-to-end Bayesian inference benchmark for
-global 21-cm cosmology. It packages 100 simulated observations, an accelerated
-hybrid forward model, explicit and analytically collapsed likelihoods, and a
-reference Nested Slice Sampling (NSS) configuration. The expensive simulation
-products are supplied as immutable tensors, so reproducing the benchmark does
-not require the pipelines that generated them.
+**A realistic, accelerator-ready benchmark for high-dimensional Bayesian
+inference under severe model degeneracy.**
+
+Global 21-cm cosmology asks inference methods to recover a millikelvin-scale
+cosmological signal from foreground and instrumental structure orders of
+magnitude larger. `global21cm-benchmark` turns this active scientific problem
+into a fixed, reproducible test of posterior recovery, mode exploration,
+Bayesian evidence estimation, and computational throughput.
+
+The benchmark provides everything needed to evaluate an inference method:
+
+- 100 simulated observations with known generating signals and parameters;
+- a differentiable JAX forward model spanning cosmology, foregrounds, and
+  instrumental beam uncertainty;
+- a 137-dimensional full likelihood and a 37-dimensional analytically
+  collapsed likelihood; and
+- a reference vectorised Nested Slice Sampling (NSS) workflow with
+  publication-ready posterior diagnostics.
+
+Expensive astrophysical and electromagnetic simulations are distilled into
+immutable tensors, so the benchmark runs independently of the original
+simulation pipelines.
 
 ## Installation
 
