@@ -157,7 +157,8 @@ radio-galaxy signal model on which its astrophysical simulations are based:
   author = {Tutt, Jacob and Bevins, Harry T. J. and Alvey, James and
             Cumner, John and Anstey, Dominic and Fialkov, Anastasia and
             de Lera Acedo, Eloy},
-  booktitle = {NeurIPS 2026 Workshop on Simulation Intelligence for Science},
+  booktitle = {NeurIPS 2026 Workshop on Sim2Science: ML with Imperfect
+               Scientific Models},
   year = {2026}
 }
 
