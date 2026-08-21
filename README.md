@@ -182,20 +182,7 @@ its astrophysical simulations are based:
 }
 ```
 
-## Documentation and validation
+## Documentation
 
 See the [benchmark specification](docs/benchmark.md) for the parameter
 ordering, likelihood equations, array shapes, and packaged-data layout.
-
-Check the archived emulator, forward-model, and likelihood reference values:
-
-```bash
-python -m tests.test_reference
-```
-
-For the GPU container:
-
-```bash
-docker build -t global21cm-benchmark .
-docker run --gpus all -v "$PWD/results:/benchmark/results" global21cm-benchmark 0
-```
