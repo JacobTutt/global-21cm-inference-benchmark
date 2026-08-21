@@ -145,6 +145,35 @@ of the live set per iteration, and stop at `dlogZ < -3`. Results are written to
 | Collapsed dimension | 37 |
 | Full dimension | 137 |
 
+## Citation
+
+If you use this benchmark, please cite both the inference framework and the
+radio-galaxy signal model on which its astrophysical simulations are based:
+
+```bibtex
+@inproceedings{tutt2026hybrid,
+  title = {A Hybrid Surrogate Framework for End-to-End Uncertainty
+           Quantification in Global 21-cm Cosmology},
+  author = {Tutt, Jacob and Bevins, Harry T. J. and Alvey, James and
+            Cumner, John and Anstey, Dominic and Fialkov, Anastasia and
+            de Lera Acedo, Eloy},
+  booktitle = {NeurIPS 2026 Workshop on Simulation Intelligence for Science},
+  year = {2026}
+}
+
+@article{reis2020radio,
+  title = {High-redshift radio galaxies: a potential new source of 21-cm
+           fluctuations},
+  author = {Reis, Itamar and Fialkov, Anastasia and Barkana, Rennan},
+  journal = {Monthly Notices of the Royal Astronomical Society},
+  volume = {499},
+  number = {4},
+  pages = {5993--6008},
+  year = {2020},
+  doi = {10.1093/mnras/staa3091}
+}
+```
+
 ## Documentation and validation
 
 See the [benchmark specification](docs/benchmark.md) for the parameter
