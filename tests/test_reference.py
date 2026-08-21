@@ -1,9 +1,12 @@
+from tempfile import TemporaryDirectory
+
 import jax
 import jax.numpy as jnp
 import numpy as np
 
 from global21cm_benchmark import Dataset, Likelihood, Posterior, Prior, forward_model
-from global21cm_benchmark.emulator import evaluate_21cm
+from global21cm_benchmark.analysis import create_analysis_plots
+from global21cm_benchmark.emulator import PARAMETER_NAMES, evaluate_21cm
 from global21cm_benchmark.forward_model import TENSOR_DIR
 
 
@@ -44,6 +47,28 @@ def test_fixed_benchmark_contract():
     )
 
 
+def test_analysis_outputs():
+    dataset = Dataset(0)
+    particles = np.asarray(Prior().sample_collapsed(jax.random.key(7), 512))
+    parameter_names = np.asarray(
+        [*(f"beta_{index:02d}" for index in range(30)), *PARAMETER_NAMES, "log_noise"]
+    )
+    weights = np.full(len(particles), 1.0 / len(particles))
+
+    with TemporaryDirectory() as directory:
+        results_file = f"{directory}/nested_sampling_results.npz"
+        np.savez(
+            results_file,
+            particles=particles,
+            parameter_names=parameter_names,
+            posterior_weights=weights,
+        )
+        corner_file, recovery_file = create_analysis_plots(results_file, dataset)
+        assert corner_file.stat().st_size > 0
+        assert recovery_file.stat().st_size > 0
+
+
 if __name__ == "__main__":
     test_fixed_benchmark_contract()
+    test_analysis_outputs()
     print("reference check passed")

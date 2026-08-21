@@ -180,13 +180,16 @@ Each call to `algorithm.step` performs one complete delete-and-replace
 transition, including all configured stepping-out and shrinkage evaluations.
 The reference CLI repeats this transition to the evidence stopping criterion,
 then performs finalisation, evidence calculation, and likelihood-call
-accounting.
+accounting. Finalisation also stores the normalized posterior weights and
+automatically creates `signal_corner.png` and `signal_recovery.png` beside the
+chain archive.
 
 ## Implementation modules
 
 | Module | Purpose |
 | --- | --- |
 | `global21cm_benchmark.api` | Public dataset and density objects |
+| `global21cm_benchmark.analysis` | Weighted corner and signal-recovery plots |
 | `global21cm_benchmark.emulator` | Fixed signal emulator |
 | `global21cm_benchmark.forward_model` | Packaged data and response contractions |
 | `global21cm_benchmark.likelihood` | Collapsed and explicit density calculations |

@@ -130,7 +130,25 @@ global21cm-inference 0 --full
 
 Both use 25 live points and eight inner slice steps per dimension, replace 20%
 of the live set per iteration, and stop at `dlogZ < -3`. Results are written to
-`results/dataset_XX/{marginalised,full}`.
+`results/dataset_XX/{marginalised,full}`. Each completed run automatically
+creates:
+
+- `signal_corner.png`: the weighted posterior over the six astrophysical
+  parameters, with the generating values marked in black.
+- `signal_recovery.png`: the injected signal, posterior mean, and weighted
+  68% and 95% credible bands in signal space.
+
+They can also be regenerated from a completed run:
+
+```python
+from global21cm_benchmark import Dataset
+from global21cm_benchmark.analysis import create_analysis_plots
+
+create_analysis_plots(
+    "results/dataset_00/marginalised/nested_sampling_results.npz",
+    Dataset(0),
+)
+```
 
 ## Benchmark dimensions
 

@@ -26,6 +26,7 @@ import jax.numpy as jnp
 import numpy as np
 from blackjax.ns.utils import finalise, log_weights
 
+from .analysis import create_analysis_plots
 from .api import Dataset, Likelihood, Prior
 from .likelihood import _names
 
@@ -111,9 +112,12 @@ def run(dataset_index, full=False):
         # Bootstrap the stochastic nested-sampling weights 100 times to retain
         # the evidence uncertainty induced by the unknown prior-volume shrinkage.
         key, weight_key = jax.random.split(key)
-        evidence = jax.scipy.special.logsumexp(
-            log_weights(weight_key, final_state, shape=100), axis=0
+        log_weight_draws = log_weights(weight_key, final_state, shape=100)
+        evidence = jax.scipy.special.logsumexp(log_weight_draws, axis=0)
+        posterior_weights = jnp.mean(
+            jnp.exp(log_weight_draws - evidence[None, :]), axis=1
         )
+        posterior_weights /= posterior_weights.sum()
 
         # Each stepping-out and shrinkage proposal evaluates the likelihood.
         # Recording this total makes sampler efficiency directly comparable.
@@ -127,16 +131,19 @@ def run(dataset_index, full=False):
     label = "full" if full else "marginalised"
     output = Path("results") / f"dataset_{dataset_index:02d}" / label
     output.mkdir(parents=True, exist_ok=True)
+    results_file = output / "nested_sampling_results.npz"
     np.savez(
-        output / "nested_sampling_results.npz",
+        results_file,
         parameter_names=np.asarray(_names(full)),
         particles=np.asarray(final_state.particles),
         log_likelihood=np.asarray(final_state.loglikelihood),
         log_likelihood_birth=np.asarray(final_state.loglikelihood_birth),
         log_evidence=np.asarray(evidence),
+        posterior_weights=np.asarray(posterior_weights),
         total_likelihood_calls=np.asarray(n_live + slice_calls),
     )
-    print(f"saved {output / 'nested_sampling_results.npz'}")
+    corner_file, recovery_file = create_analysis_plots(results_file, dataset)
+    print(f"saved {results_file}, {corner_file}, and {recovery_file}")
 
 
 def main():
