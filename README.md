@@ -75,6 +75,11 @@ prediction = forward_model(
     parameters[30:130],    # beam coefficients
     parameters[130:136],   # signal parameters
 )
+
+# Jacobians with respect to each parameter block
+foreground_jacobian, beam_jacobian, signal_jacobian = jax.jacfwd(
+    forward_model, argnums=(0, 1, 2)
+)(parameters[:30], parameters[30:130], parameters[130:136])
 ```
 
 The injected profile and parameters are available as
@@ -112,13 +117,18 @@ prior = Prior()
 collapsed = prior.sample_collapsed(jax.random.key(0))[0]
 full = prior.sample_full(jax.random.key(1))[0]
 
-collapsed_log_likelihood = likelihood.evaluate_collapsed(collapsed)
-full_log_likelihood = likelihood.evaluate_full(full)
+collapsed_log_likelihood, collapsed_gradient = jax.value_and_grad(
+    likelihood.evaluate_collapsed
+)(collapsed)
+full_log_likelihood, full_gradient = jax.value_and_grad(
+    likelihood.evaluate_full
+)(full)
 collapsed_log_posterior = posterior.evaluate_collapsed(collapsed)
 full_log_posterior = posterior.evaluate_full(full)
 ```
 
-All evaluation methods are compatible with `jax.jit` and `jax.vmap`.
+All evaluation methods are fully differentiable and compatible with
+`jax.jit`, `jax.vmap`, and JAX automatic differentiation.
 
 ## 3. Nested Slice Sampling
 
