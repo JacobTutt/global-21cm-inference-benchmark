@@ -99,8 +99,8 @@ Gaussian-noise model:
 
 ![End-to-end inference pipeline](docs/figures/inference_pipeline.png)
 
-*Figure 2. End-to-end inference path from the accelerated forward model to
-likelihood-based Bayesian sampling.*
+*Figure 2. Benchmark workflow from physical uncertainty components and
+accelerated simulation to reference NSS and alternative inference methods.*
 
 The two parameterisations share a single object interface:
 
