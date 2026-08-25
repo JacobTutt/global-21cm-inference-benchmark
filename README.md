@@ -139,8 +139,8 @@ transition through `algorithm.step`.
 
 ![Nested Slice Sampling recovery benchmark](docs/figures/nss_signal_recovery.png)
 
-*Figure 3. End-to-end signal recovery from the collapsed NSS benchmark across
-100 unseen signal realisations.*
+*Figure 3. Representative NSS signal recoveries ordered by whole-profile
+credible-band coverage across 100 unseen realisations.*
 
 Run the 37-dimensional collapsed benchmark for dataset 0 with:
 
