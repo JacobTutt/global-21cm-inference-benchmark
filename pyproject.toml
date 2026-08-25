@@ -7,6 +7,7 @@ name = "global21cm-benchmark"
 version = "0.1.0"
 description = "Fixed end-to-end global 21-cm inference benchmark"
 readme = "README.md"
+license-files = ["LICENSE", "LICENSING.md", "LICENSES/*"]
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "jax==0.6.2",
@@ -33,6 +34,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 global21cm_benchmark = [
     "emulator/*.npz",
+    "emulator/*.license",
     "inference_tensors/*.npy",
     "inference_tensors/*.npz",
     "simulated_data/*/*.npy",

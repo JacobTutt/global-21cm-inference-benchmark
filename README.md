@@ -212,3 +212,13 @@ its astrophysical simulations are based:
 
 See the [benchmark specification](docs/benchmark.md) for the parameter
 ordering, likelihood equations, array shapes, and packaged-data layout.
+
+## Licensing
+
+The benchmark code and documentation are available under the BSD 3-Clause
+License. The pretrained radio-galaxy emulator weights are provided separately
+for reproduction and methodological benchmarking under the custom 21cmSPACE
+Benchmark Model Use Licence. They must not be used to derive independent
+astrophysical or cosmological results without prior written permission from
+the 21cmSPACE collaboration. See [LICENSING.md](LICENSING.md) for the precise
+scope and permission contact.

@@ -1,0 +1,74 @@
+21cmSPACE BENCHMARK MODEL USE LICENCE
+Version 1.0, 2026
+
+This is a custom, source-available model licence. It is not an open-source
+licence approved by the Open Source Initiative.
+
+1. DEFINITIONS
+
+"Model" means the pretrained radio-galaxy emulator parameters distributed as
+`weights.npz` and any modified, converted, fine-tuned or derivative version of
+those parameters.
+
+"Benchmark Use" means reproducing the results of this benchmark or evaluating
+statistical and computational inference methods using the benchmark's supplied
+synthetic observations. Methodological results obtained from such evaluation
+may be reported and published.
+
+"Independent Scientific Use" means using the Model or its predictions to
+derive, report or publish astrophysical or cosmological constraints, forecasts
+or scientific conclusions beyond Benchmark Use.
+
+"Licensor" means the copyright holder or holders identified in the licensing
+metadata distributed with the Model.
+
+2. LICENCE GRANT
+
+Subject to this licence, the Licensor grants you a worldwide, royalty-free,
+non-exclusive, non-transferable licence to possess, reproduce, execute and
+modify the Model solely for:
+
+(a) Benchmark Use; and
+(b) internal, non-public research, evaluation and teaching.
+
+3. INDEPENDENT SCIENTIFIC USE
+
+Independent Scientific Use is not permitted without prior written permission
+from the 21cmSPACE collaboration. Permission requests should be directed to
+Professor Anastasia Fialkov at <afialkov@ast.cam.ac.uk>.
+
+4. REDISTRIBUTION
+
+You may redistribute an unmodified copy of the Model only as part of this
+benchmark and only if this licence, the associated licensing metadata and all
+copyright and attribution notices remain attached. You may not redistribute,
+sublicense or make available a modified or derivative Model without prior
+written permission from the Licensor.
+
+5. ATTRIBUTION
+
+Publications arising from Benchmark Use must cite the benchmark publication
+and the 21cmSPACE and radio-galaxy model publications identified in the
+repository documentation. Citation does not replace the permission required
+under Section 3.
+
+6. NO ENDORSEMENT
+
+Use of the Model does not imply endorsement of any result by the Licensor or
+the 21cmSPACE collaboration. Their names may not be used to endorse or promote
+results, products or services without prior written permission.
+
+7. TERMINATION
+
+The rights granted under this licence terminate automatically upon breach of
+its terms. Upon termination, you must cease use and redistribution of the
+Model and delete all copies in your possession or control.
+
+8. DISCLAIMER AND LIMITATION OF LIABILITY
+
+THE MODEL IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING, BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE LICENSOR
+OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE MODEL OR ITS USE.
